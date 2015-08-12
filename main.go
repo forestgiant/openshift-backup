@@ -123,7 +123,7 @@ func main() {
 	// cmd.Stdin = os.Stdin
 	// cmd.Stdout = os.Stdout
 	// cmd.Stderr = os.Stderr
-	// err = cmd.Run()
+	// err = cmd.Start()
 	// if _, ok := err.(*exec.ExitError); ok {
 	// 	os.Exit(1)
 	// }
