@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -11,7 +10,6 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
-	"strings"
 	"time"
 )
 
@@ -118,13 +116,17 @@ func main() {
 	createDir(dirPath, 0700)
 
 	// Define commands
-	var (
-		cmd    *exec.Cmd
-		output []byte
-	)
+	var cmd *exec.Cmd
 
 	// TODO: Setup port forwarding so it's not blocking
 	// cmd = exec.Command("rhc", "port-forward", "-a", *appNamePtr)
+	// cmd.Stdin = os.Stdin
+	// cmd.Stdout = os.Stdout
+	// cmd.Stderr = os.Stderr
+	// err = cmd.Run()
+	// if _, ok := err.(*exec.ExitError); ok {
+	// 	os.Exit(1)
+	// }
 
 	// Change directory to dirPath to save pg_dump
 	os.Chdir(dirPath)
@@ -133,17 +135,14 @@ func main() {
 
 	// Call pg_dump -w (don't prompt password)
 	cmd = exec.Command("pg_dump", "-w", "-f", *appNamePtr+".sql")
-	output, err = cmd.CombinedOutput()
-	prettyOutput := strings.Replace(string(output), "\n", "", -1)
-
-	if err != nil {
-		fmt.Println(errors.New(err.Error() + ": " + prettyOutput))
-	} else {
-		fmt.Printf("Backup complete: %v/%v.sql", dirPath, *appNamePtr)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err = cmd.Run()
+	if _, ok := err.(*exec.ExitError); ok {
+		os.Exit(1)
 	}
-
-	fmt.Println(prettyOutput)
-
+	os.Exit(0)
 }
 
 // Check for and create directory
