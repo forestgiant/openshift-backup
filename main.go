@@ -1,35 +1,41 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
 	"os/user"
+	"path/filepath"
 	"strings"
 	"time"
 )
 
 func main() {
+	// Setup environment variables if a config json exist
+	setEnvFromJSON("config.json")
+
 	// Get Users home directory
 	user, err := user.Current()
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	//Check for our command line configuration flags
+	// Check for our command line configuration flags
 	var (
 		appNameUsage = "*REQUIRED* Name of application to snapshot."
-		appNamePtr   = flag.String("appname", "", appNameUsage)
+		appNamePtr   = flag.String("appname", os.Getenv("APPNAME"), appNameUsage)
 
 		// Postgres
 		userNameUsage = "*REQUIRED* Username for Postgres DB"
-		userNamePtr   = flag.String("username", os.Getenv("PGUSER"), userNameUsage)
+		userNamePtr   = flag.String("username", "", userNameUsage)
 
 		passwordUsage = "*REQUIRED* Username for Postgres DB"
-		passwordPtr   = flag.String("password", os.Getenv("PGPASSWORD"), passwordUsage)
+		passwordPtr   = flag.String("password", "", passwordUsage)
 
 		portUsage = "*REQUIRED* Port for Postgres DB"
 		portPtr   = flag.String("port", os.Getenv("PGPORT"), portUsage)
@@ -42,21 +48,31 @@ func main() {
 	)
 
 	// Set up short hand flags
-	flag.StringVar(appNamePtr, "a", "", appNameUsage+" (shorthand)")
+	flag.StringVar(appNamePtr, "a", os.Getenv("APPNAME"), appNameUsage+" (shorthand)")
 	flag.StringVar(userNamePtr, "u", "", userNameUsage+" (shorthand)")
 	flag.StringVar(passwordPtr, "w", "", passwordUsage+" (shorthand)")
-	flag.StringVar(portPtr, "p", "", portUsage+" (shorthand)")
-	flag.StringVar(dbNamePtr, "d", "", dbNameUsage+" (shorthand)")
+	flag.StringVar(portPtr, "p", os.Getenv("PGPORT"), portUsage+" (shorthand)")
+	flag.StringVar(dbNamePtr, "d", os.Getenv("PGDATABASE"), dbNameUsage+" (shorthand)")
 
 	flag.Parse()
+
+	fmt.Println("app name:", os.Getenv("APPNAME"))
 
 	// If an appName isn't set then return
 	if *appNamePtr == "" {
 		log.Fatalln("Must set --appName (-a) flag")
 	} else if *userNamePtr == "" {
-		log.Fatalln("Must set --username (-u) flag")
+		*userNamePtr = os.Getenv("PGUSER")
+
+		if *userNamePtr == "" {
+			log.Fatalln("Must set --username (-u) flag")
+		}
 	} else if *passwordPtr == "" {
-		log.Fatalln("Must set --password (-w) flag")
+		*passwordPtr = os.Getenv("PGPASSWORD")
+
+		if *passwordPtr == "" {
+			log.Fatalln("Must set --password (-w) flag")
+		}
 	} else if *portPtr == "" {
 		log.Fatalln("Must set --port (-p) flag")
 	}
@@ -67,7 +83,6 @@ func main() {
 	}
 
 	// Set environment variables
-
 	os.Setenv("PGHOST", "127.0.0.1")
 	os.Setenv("PGPORT", *portPtr)
 	os.Setenv("PGDATABASE", *dbNamePtr)
@@ -75,18 +90,18 @@ func main() {
 	os.Setenv("PGPASSWORD", *passwordPtr)
 
 	// Set Path
-	path := *backupPathPtr + "/" + *folderNamePtr
+	path := filepath.Join(*backupPathPtr, *folderNamePtr)
 
 	// Create OpenShiftBackUps directory
 	createDir(path, 0700)
 
-	//Get the name of the directory where we want to save this backup
+	// Get the name of the directory where we want to save this backup
 	weekdays := []string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
 	directory := weekdays[time.Now().Weekday()]
 
-	dirPath := path + "/" + directory
+	dirPath := filepath.Join(path, directory)
 
-	//Create the backup directory if it does not exist
+	// Create the backup directory if it does not exist
 	createDir(dirPath, 0700)
 
 	// Define commands
@@ -118,6 +133,7 @@ func main() {
 
 }
 
+// Check for and create directory
 func createDir(name string, perm os.FileMode) error {
 	_, err := os.Stat(name)
 	if err != nil {
@@ -134,4 +150,29 @@ func createDir(name string, perm os.FileMode) error {
 	}
 
 	return nil
+}
+
+// Struct used to store environment variables from config.json
+type env struct {
+	Key   string
+	Value string
+}
+
+// Creats env from json config
+func setEnvFromJSON(configPath string) {
+	configFile, err := ioutil.ReadFile(configPath)
+	if err != nil {
+		fmt.Println("config.json not found.")
+		return
+	}
+
+	var envVars []env
+	json.Unmarshal(configFile, &envVars)
+
+	// set environment variables
+	for _, env := range envVars {
+		// fmt.Println(env)
+		os.Setenv(env.Key, env.Value)
+	}
+
 }
