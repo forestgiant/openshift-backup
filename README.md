@@ -1,8 +1,8 @@
 ## OpenShift-Backup
 Simiple backup of an OpenShift application
 
-## Requirments
+## Requirements
 
 * OS X / Linux
 * Install rhc tools (https://developers.openshift.com/en/managing-client-tools.html)
-* rhc setup
+* `rhc setup`
