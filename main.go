@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"strings"
 	"time"
 )
 
@@ -25,16 +26,16 @@ func main() {
 
 		// Postgres
 		userNameUsage = "*REQUIRED* Username for Postgres DB"
-		userNamePtr   = flag.String("username", "", userNameUsage)
+		userNamePtr   = flag.String("username", os.Getenv("PGUSER"), userNameUsage)
 
 		passwordUsage = "*REQUIRED* Username for Postgres DB"
-		passwordPtr   = flag.String("password", "", passwordUsage)
+		passwordPtr   = flag.String("password", os.Getenv("PGPASSWORD"), passwordUsage)
 
 		portUsage = "*REQUIRED* Port for Postgres DB"
-		portPtr   = flag.String("port", "", portUsage)
+		portPtr   = flag.String("port", os.Getenv("PGPORT"), portUsage)
 
 		dbNameUsage = "Name of Postgres DB"
-		dbNamePtr   = flag.String("dbname", "", portUsage)
+		dbNamePtr   = flag.String("dbname", os.Getenv("PGDATABASE"), portUsage)
 
 		backupPathPtr = flag.String("path", user.HomeDir, "The base directory where the openshift backups will be stored.")
 		folderNamePtr = flag.String("folder", "OpenShiftBackUps", "Name of folder that backups will be stored in.")
@@ -66,13 +67,12 @@ func main() {
 	}
 
 	// Set environment variables
-	os.Setenv("PGHOST", "127.0.0.1")
-	os.Setenv("PGPORT", portPtr)
-	os.Setenv("PGDATABASE", dbNamePtr)
-	os.Setenv("PGUSER", userNamePtr)
-	os.Setenv("PGPASSWORD", passwordPtr)
 
-	fmt.Println("Running openshift-backup with backup path set to ", *backupPathPtr)
+	os.Setenv("PGHOST", "127.0.0.1")
+	os.Setenv("PGPORT", *portPtr)
+	os.Setenv("PGDATABASE", *dbNamePtr)
+	os.Setenv("PGUSER", *userNamePtr)
+	os.Setenv("PGPASSWORD", *passwordPtr)
 
 	// Set Path
 	path := *backupPathPtr + "/" + *folderNamePtr
@@ -89,42 +89,37 @@ func main() {
 	//Create the backup directory if it does not exist
 	createDir(dirPath, 0700)
 
-	//Define our openshift command //fmt.Println("App name: ", *appNamePtr)
-	fmt.Println("App name: ", *appNamePtr)
-
 	// Define commands
 	var (
 		cmd    *exec.Cmd
 		output []byte
 	)
 
-	// setup port forwarding
-	cmd = exec.Command("rhc", "port-forward", "-a", *appNamePtr)
-	output, err = cmd.CombinedOutput()
-
-	if err != nil {
-		log.Fatalln(errors.New(err.Error() + ": " + fmt.Sprint(output)))
-	}
-
-	fmt.Println(output)
+	// TODO: Setup port forwarding so it's not blocking
+	// cmd = exec.Command("rhc", "port-forward", "-a", *appNamePtr)
 
 	// Change directory to dirPath to save pg_dump
 	os.Chdir(dirPath)
 
+	fmt.Println("Running openshift-backup with backup path set to ", dirPath)
+
 	// Call pg_dump -w (don't prompt password)
-	cmd = exec.Command("pg_dump", "-w")
+	cmd = exec.Command("pg_dump", "-w", "-f", *appNamePtr+".sql")
 	output, err = cmd.CombinedOutput()
+	prettyOutput := strings.Replace(string(output), "\n", "", -1)
 
 	if err != nil {
-		log.Fatalln(errors.New(err.Error() + ": " + fmt.Sprint(output)))
+		fmt.Println(errors.New(err.Error() + ": " + prettyOutput))
+	} else {
+		fmt.Printf("Backup complete: %v/%v.sql", dirPath, *appNamePtr)
 	}
 
-	fmt.Println(output)
+	fmt.Println(prettyOutput)
 
 }
 
 func createDir(name string, perm os.FileMode) error {
-	fi, err := os.Stat(name)
+	_, err := os.Stat(name)
 	if err != nil {
 		fmt.Println("Creating directory named", name)
 
@@ -135,9 +130,6 @@ func createDir(name string, perm os.FileMode) error {
 
 			return err
 		}
-
-	} else {
-		fmt.Println("Folder exists!: ", fi.Name())
 
 	}
 
