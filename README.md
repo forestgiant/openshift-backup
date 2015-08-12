@@ -1,5 +1,5 @@
 ## OpenShift-Backup
-Simiple backup of an OpenShift application
+Simiple backup for OpenShift PostgreSQL using `rhc port-forward` and `pg_dump`
 
 ## Requirements
 
