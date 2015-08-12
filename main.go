@@ -1,12 +1,13 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
-	"os"
-	"os/user"
-	// "os/exec"
 	"log"
+	"os"
+	"os/exec"
+	"os/user"
 	"time"
 )
 
@@ -51,12 +52,21 @@ func main() {
 	dirPath := path + "/" + directory
 
 	//Create the backup directory if it does not exist
-	createDir(dirPath, 0600)
+	createDir(dirPath, 0700)
 
-	//Define our openshift command
+	//Define our openshift command //fmt.Println("App name: ", *appNamePtr)
 	fmt.Println("App name: ", *appNamePtr)
 
-	// rhc snapshot save -a {appName}
+	// TODO: change directory into dirPath first
+
+	// cmd := exec.Command("rhc", "snapshot-save", "-a", *appNamePtr)
+	// output, err := cmd.CombinedOutput()
+
+	// if err != nil {
+	// 	log.Fatalln(errors.New(err.Error() + ": " + fmt.Sprint(output)))
+	// }
+
+	// fmt.Println(output)
 
 }
 
