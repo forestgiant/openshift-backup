@@ -14,16 +14,28 @@ func main() {
 	// Get Users home directory
 	user, err := user.Current()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalln(err)
 	}
-	fmt.Println(user.HomeDir)
 
 	//Check for our command line configuration flags
 	var (
+		appNameUsage = "*REQUIRED* Name of application to snapshot."
+		appNamePtr   = flag.String("appName", "", appNameUsage)
+
 		backupPathPtr = flag.String("backupPath", user.HomeDir, "The base directory where the openshift backups will be stored.")
 		folderNamePtr = flag.String("folderName", "OpenShiftBackUps", "Name of folder that backups will be stored in.")
 	)
+
+	// Set up short hand flags
+	flag.StringVar(appNamePtr, "a", "", appNameUsage+" (shorthand)")
+
 	flag.Parse()
+
+	// If an appName isn't set then return
+	if *appNamePtr == "" {
+		log.Fatalln("Must set --appName (-a) flag")
+	}
+
 	fmt.Println("Running openshift-backup with backup path set to ", *backupPathPtr)
 
 	// Set Path
@@ -42,6 +54,9 @@ func main() {
 	createDir(dirPath, 0600)
 
 	//Define our openshift command
+	fmt.Println("App name: ", *appNamePtr)
+
+	// rhc snapshot save -a {appName}
 
 }
 
