@@ -21,21 +21,56 @@ func main() {
 	//Check for our command line configuration flags
 	var (
 		appNameUsage = "*REQUIRED* Name of application to snapshot."
-		appNamePtr   = flag.String("appName", "", appNameUsage)
+		appNamePtr   = flag.String("appname", "", appNameUsage)
 
-		backupPathPtr = flag.String("backupPath", user.HomeDir, "The base directory where the openshift backups will be stored.")
-		folderNamePtr = flag.String("folderName", "OpenShiftBackUps", "Name of folder that backups will be stored in.")
+		// Postgres
+		userNameUsage = "*REQUIRED* Username for Postgres DB"
+		userNamePtr   = flag.String("username", "", userNameUsage)
+
+		passwordUsage = "*REQUIRED* Username for Postgres DB"
+		passwordPtr   = flag.String("password", "", passwordUsage)
+
+		portUsage = "*REQUIRED* Port for Postgres DB"
+		portPtr   = flag.String("port", "", portUsage)
+
+		dbNameUsage = "Name of Postgres DB"
+		dbNamePtr   = flag.String("dbname", "", portUsage)
+
+		backupPathPtr = flag.String("path", user.HomeDir, "The base directory where the openshift backups will be stored.")
+		folderNamePtr = flag.String("folder", "OpenShiftBackUps", "Name of folder that backups will be stored in.")
 	)
 
 	// Set up short hand flags
 	flag.StringVar(appNamePtr, "a", "", appNameUsage+" (shorthand)")
+	flag.StringVar(userNamePtr, "u", "", userNameUsage+" (shorthand)")
+	flag.StringVar(passwordPtr, "w", "", passwordUsage+" (shorthand)")
+	flag.StringVar(portPtr, "p", "", portUsage+" (shorthand)")
+	flag.StringVar(dbNamePtr, "d", "", dbNameUsage+" (shorthand)")
 
 	flag.Parse()
 
 	// If an appName isn't set then return
 	if *appNamePtr == "" {
 		log.Fatalln("Must set --appName (-a) flag")
+	} else if *userNamePtr == "" {
+		log.Fatalln("Must set --username (-u) flag")
+	} else if *passwordPtr == "" {
+		log.Fatalln("Must set --password (-w) flag")
+	} else if *portPtr == "" {
+		log.Fatalln("Must set --port (-p) flag")
 	}
+
+	// If the DB Name is black set it to the appNamePtr
+	if *dbNamePtr == "" {
+		*dbNamePtr = *appNamePtr
+	}
+
+	// Set environment variables
+	os.Setenv("PGHOST", "127.0.0.1")
+	os.Setenv("PGPORT", portPtr)
+	os.Setenv("PGDATABASE", dbNamePtr)
+	os.Setenv("PGUSER", userNamePtr)
+	os.Setenv("PGPASSWORD", passwordPtr)
 
 	fmt.Println("Running openshift-backup with backup path set to ", *backupPathPtr)
 
@@ -57,16 +92,34 @@ func main() {
 	//Define our openshift command //fmt.Println("App name: ", *appNamePtr)
 	fmt.Println("App name: ", *appNamePtr)
 
-	// TODO: change directory into dirPath first
+	// Define commands
+	var (
+		cmd    *exec.Cmd
+		output []byte
+	)
 
-	// cmd := exec.Command("rhc", "snapshot-save", "-a", *appNamePtr)
-	// output, err := cmd.CombinedOutput()
+	// setup port forwarding
+	cmd = exec.Command("rhc", "port-forward", "-a", *appNamePtr)
+	output, err = cmd.CombinedOutput()
 
-	// if err != nil {
-	// 	log.Fatalln(errors.New(err.Error() + ": " + fmt.Sprint(output)))
-	// }
+	if err != nil {
+		log.Fatalln(errors.New(err.Error() + ": " + fmt.Sprint(output)))
+	}
 
-	// fmt.Println(output)
+	fmt.Println(output)
+
+	// Change directory to dirPath to save pg_dump
+	os.Chdir(dirPath)
+
+	// Call pg_dump -w (don't prompt password)
+	cmd = exec.Command("pg_dump", "-w")
+	output, err = cmd.CombinedOutput()
+
+	if err != nil {
+		log.Fatalln(errors.New(err.Error() + ": " + fmt.Sprint(output)))
+	}
+
+	fmt.Println(output)
 
 }
 
