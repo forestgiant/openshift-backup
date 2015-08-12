@@ -21,12 +21,13 @@ func main() {
 	//Check for our command line configuration flags
 	var (
 		backupPathPtr = flag.String("backupPath", user.HomeDir, "The base directory where the openshift backups will be stored.")
+		folderNamePtr = flag.String("folderName", "OpenShiftBackUps", "Name of folder that backups will be stored in.")
 	)
 	flag.Parse()
 	fmt.Println("Running openshift-backup with backup path set to ", *backupPathPtr)
 
 	// Set Path
-	path := *backupPathPtr + "/" + "OpenShiftBackUps"
+	path := *backupPathPtr + "/" + *folderNamePtr
 
 	// Create OpenShiftBackUps directory
 	createDir(path, 0700)
@@ -49,7 +50,7 @@ func createDir(name string, perm os.FileMode) error {
 	if err != nil {
 		fmt.Println("Creating directory named", name)
 
-		// create folder
+		// Create folder
 		err = os.Mkdir(name, perm)
 		if err != nil {
 			fmt.Println("Couldn't create directory: ", err)
