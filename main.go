@@ -28,7 +28,7 @@ func main() {
 	// Check for our command line configuration flags
 	var (
 		appNameUsage = "*REQUIRED* Name of application to snapshot."
-		appNamePtr   = flag.String("appname", os.Getenv("APPNAME"), appNameUsage)
+		appNamePtr   = flag.String("appname", "", appNameUsage)
 
 		// Postgres
 		userNameUsage = "*REQUIRED* Username for Postgres DB"
@@ -38,43 +38,56 @@ func main() {
 		passwordPtr   = flag.String("password", "", passwordUsage)
 
 		portUsage = "*REQUIRED* Port for Postgres DB"
-		portPtr   = flag.String("port", os.Getenv("PGPORT"), portUsage)
+		portPtr   = flag.String("port", "", portUsage)
 
 		dbNameUsage = "Name of Postgres DB"
-		dbNamePtr   = flag.String("dbname", os.Getenv("PGDATABASE"), portUsage)
+		dbNamePtr   = flag.String("dbname", "", portUsage)
 
 		backupPathPtr = flag.String("path", user.HomeDir, "The base directory where the openshift backups will be stored.")
 		folderNamePtr = flag.String("folder", "OpenShiftBackUps", "Name of folder that backups will be stored in.")
 	)
 
 	// Set up short hand flags
-	flag.StringVar(appNamePtr, "a", os.Getenv("APPNAME"), appNameUsage+" (shorthand)")
+	flag.StringVar(appNamePtr, "a", "", appNameUsage+" (shorthand)")
 	flag.StringVar(userNamePtr, "u", "", userNameUsage+" (shorthand)")
 	flag.StringVar(passwordPtr, "w", "", passwordUsage+" (shorthand)")
-	flag.StringVar(portPtr, "p", os.Getenv("PGPORT"), portUsage+" (shorthand)")
-	flag.StringVar(dbNamePtr, "d", os.Getenv("PGDATABASE"), dbNameUsage+" (shorthand)")
+	flag.StringVar(portPtr, "p", "", portUsage+" (shorthand)")
+	flag.StringVar(dbNamePtr, "d", "", dbNameUsage+" (shorthand)")
 
 	flag.Parse()
 
 	fmt.Println("app name:", os.Getenv("APPNAME"))
 
-	// If an appName isn't set then return
+	// Try to set required flags to env if they don't exist error
 	if *appNamePtr == "" {
-		log.Fatalln("Must set --appName (-a) flag")
-	} else if *userNamePtr == "" {
+		*appNamePtr = os.Getenv("APPNAME")
+
+		if *appNamePtr == "" {
+			log.Fatalln("Must set --appName (-a) flag")
+		}
+	}
+
+	if *userNamePtr == "" {
 		*userNamePtr = os.Getenv("PGUSER")
 
 		if *userNamePtr == "" {
 			log.Fatalln("Must set --username (-u) flag")
 		}
-	} else if *passwordPtr == "" {
+	}
+
+	if *passwordPtr == "" {
 		*passwordPtr = os.Getenv("PGPASSWORD")
 
 		if *passwordPtr == "" {
 			log.Fatalln("Must set --password (-w) flag")
 		}
-	} else if *portPtr == "" {
-		log.Fatalln("Must set --port (-p) flag")
+	}
+
+	if *portPtr == "" {
+		*portPtr = os.Getenv("PGPORT")
+		if *portPtr == "" {
+			log.Fatalln("Must set --port (-p) flag")
+		}
 	}
 
 	// If the DB Name is black set it to the appNamePtr
