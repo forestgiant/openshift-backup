@@ -138,10 +138,11 @@ func main() {
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	err = cmd.Run()
-	if _, ok := err.(*exec.ExitError); ok {
-		os.Exit(1)
-	}
+	if err := cmd.Run(); err != nil {
+        log.Fatal(err)
+    }
+
+	fmt.Println("Backup Complete.")
 	os.Exit(0)
 }
 
