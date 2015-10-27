@@ -39,7 +39,7 @@ func main() {
 		portPtr   = flag.String("port", "", portUsage)
 
 		dbNameUsage = "Name of Postgres DB"
-		dbNamePtr   = flag.String("dbname", "", portUsage)
+		dbNamePtr   = flag.String("dbname", "", dbNameUsage)
 
 		backupPathPtr = flag.String("path", user.HomeDir, "The base directory where the openshift backups will be stored.")
 		folderNamePtr = flag.String("folder", "OpenShiftBackUps", "Name of folder that backups will be stored in.")
@@ -139,8 +139,8 @@ func main() {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
-        log.Fatal(err)
-    }
+		log.Fatal(err)
+	}
 
 	fmt.Println("Backup Complete.")
 	os.Exit(0)
